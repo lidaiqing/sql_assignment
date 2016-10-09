@@ -1,0 +1,303 @@
+\documentclass{article}
+\usepackage{fullpage}
+\usepackage[normalem]{ulem}
+\usepackage{amstext}
+\usepackage{amsmath}
+\newcommand{\var}[1]{\mathit{#1}}
+\setlength{\parskip}{6pt}
+
+\begin{document}
+
+\noindent
+University of Toronto\\
+{\sc csc}343, Fall 2016\\[10pt]
+{\LARGE\bf Assignment 1: Daiqing Li 1000795357} \\[10pt]
+
+\noindent
+Unary operators on relations:
+\begin{itemize}
+\item $\Pi_{x, y, z} (R)$
+\item $\sigma_{condition} (R) $
+\item $\rho_{New} (R) $
+\item $\rho_{New(a, b, c)} (R) $
+\end{itemize}
+Binary operators on relations:
+\begin{itemize}
+\item $R \times S$
+\item $R \bowtie S$
+\item $R \bowtie_{condition} S$
+\item $R \cup S$
+\item $R \cap S$
+\item $R - S$
+\end{itemize}
+Logical operators:
+\begin{itemize}
+\item $\vee$
+\item $\wedge$
+\item $\neg$
+\end{itemize}
+Assignment:
+\begin{itemize}
+\item $New(a, b, c) := R$
+\end{itemize}
+Stacked subscripts:
+\begin{itemize}
+\item
+$\sigma_{\substack{this.something > that.something \wedge \\ this.otherthing \leq that.otherthing}}$
+\end{itemize}
+
+\noindent
+Below is the text of the assignment questions; we suggest you include it in your solution.
+We have also included a nonsense example of how a query might look in LaTeX.  
+We used \verb|\var| in a couple of places to show what that looks like.  
+If you leave it out, most of the time the algebra looks okay, but certain words,
+{\it e.g.}, ``Offer" look horrific without it.
+
+The characters ``\verb|\\|" create a line break and ``[5pt]" puts in 
+five points of extra vertical space.  The algebra is easier to read with extra
+vertical space.
+We chose ``--" to indicate comments, and added less vertical space between comments
+and the algebra they pertain to than between steps in the algebra.
+This helps the comments visually stick to the algebra.
+
+
+%----------------------------------------------------------------------------------------------------------------------
+\section*{Part 1: Queries}
+
+\begin{enumerate}
+
+\item   % ----------
+Find all patients who (a) have had more than 2 different doctors write them a prescription,
+and (b) have had a narcotic prescribed to them by every doctor who has written them a prescription.
+A narcotic is a drug whose schedule is ``narcotics".
+Report the patient's OHIP number. \\
+
+{\large %This increase in font size makes the subscripts much more readable.
+-- sID has a grade of at least 85. \\[5pt]
+$
+HaveHighGrade(\var{sID}) := 
+	\Pi_{sID} 
+	\sigma_{grade \ge 85} 
+	Took \\[10pt]
+$
+-- sID passed a course taught by Atwood. \\[5pt]
+$
+PassedAtwood(\var{sID}) := 
+	\Pi_{\var{sID}} 
+	\sigma_{instructor := ``Atwood" \wedge grade \ge 50} 
+	(Took \bowtie \var{Offering}) 
+	\\[10pt]
+$
+-- sID got 100 at least twice. \\[5pt]
+$
+AtLeastTwice(\var{sID}) := \\[5pt]  %This RA statement is too long, so we break it into two lines.
+	\hspace*{1cm}  % This command creates an indentation
+	\Pi_{T1.\var{sID}} 
+	\sigma_{
+		T1.\var{oID} \neq T2.\var{oID} \wedge 
+		T1.\var{sID} = T2.\var{sID} \wedge 
+		T1.grade = 100 \wedge T2.grade = 100}
+	[ (\rho_{T1}Took) \times (\rho_{T2}Took) ] \\[5pt]
+$
+} % End of font size increase.
+{\large
+$
+HaveAtLeastThreeDoctor(OHIP):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{patient}
+	\sigma_{(P1.\var{doctor} < P2.\var{doctor} < p3.\var{doctor})\wedge(P1.patient=P2.patient=P3.patient)}
+	[(\rho_{P1}Prescription) \times (\rho_{P2}Prescription) \times (\rho_{P3}prescription)] \\[5pt]
+NonNarcotics(OHIP):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{patient}
+	\sigma_{schedule \neq ``narcotic"}
+	(Prescription \bowtie_{Prescription.\var{drug} = Product.\var{DIN}} Product) \\[5pt]  
+ANS(OHIP):= HaveAtLeastThreeDoctor(OHIP) - NonNarcotics(OHIP) \\[5pt]  
+$
+}
+\item   % ----------
+Find every prescription from 2016 that has never been filled.
+Report the patient's OHIP number, the prescription ID, prescription date, and drug. \\
+
+{\large
+$
+AllPrescriptionSince2016(OHIP,RxID,date,drug):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{patient, RxID, date, drug}
+	\sigma_{date \ge 2016}
+	(Prescription) \\[5pt]
+AllPrescriptionFilledSince2016(OHIP,RxID,date,drug):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{patient, RxID, Prescription.\var{date}, drug}
+	\sigma_{Prescription.\var{date} \ge 2016}
+	(Prescription \bowtie Filled) \\[5pt]
+ANS(OHIP,RxID,date,drug):= \\[5pt]
+ 	\hspace*{1cm}
+ 	AllPrescriptionSince2016(OHIP,RxID,date,drug) - \\
+ 	\hspace*{2cm}
+ 	AllPrescriptionFilledSince2016(OHIP,RxID,date,drug) \\[5pt]  
+$
+}
+\item   % ---------- 
+Find the pharmacist who has trained the most people.
+Report the pharmacist's OCP number and name.
+
+
+\item   % ----------
+The ``narcotics prescription period" of a doctor for a patient is the time from the first
+prescription for narcotics from that doctor for that patient to the most recent one.
+(It would be zero if that doctor wrote only one prescription for narcotics for that patient.)
+Find all patients who have had narcotics prescribed by two or more doctors,
+and for whom the narcotics prescription periods never overlap.
+In other words, if they had narcotics prescribed by $n$ different doctors,
+$$[start_1..end_1] < [start_2..end_2] < ... < [start_n ..end_n]$$
+where $start_i$ and $end_i$ are the start and end of the 
+narcotics prescription period of doctor $i$ for that patient.
+Notice that we have written strictly less than. 
+This means that if $end_i = start_{i+1}$ we do not consider that the periods overlap.
+Report the patient's OHIP number.
+
+
+\item   % ----------
+Find all pharmacists who have never filled a prescription for a drug product whose active ingredient is ``codeine".
+Report their OCP number and every schedule for which they {\it have} filled a prescription.
+Put the information into a relation with attributes ``OCP" and ``schedule". \\
+
+{\large
+$
+AllFilled(OCP, schedule):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{pharmacist, schedule}
+	(Prescription \bowtie Filled \bowtie_{Prescription.\var{drug} = Product.\var{DIN}} Product) \\[5pt]
+DrugCodeline(drug):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{DIN}
+	(Product \bowtie_{Product.DIN=ActiveIngredient.DIN \wedge ActiveIngredient.name=``codeline"} \\
+	\hspace*{4cm}	
+	ActiveIngredient) \\[5pt]
+FilledCodeline(OCP, schedule):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{pharmacist, schedule}
+	(Prescription \bowtie Filled \bowtie DrugCodeline \bowtie_{Prescription.\var{drug} = Product.\var{DIN}} Product) \\[5pt]
+ANS(OCP, schedule):= \\[5pt]
+ 	\hspace*{1cm}
+ 	AllFilled(OCP, schedule) - FilledCodeline(OCP, schedule) \\[5pt]
+$
+}
+
+
+\item   % ----------
+LetÕs say a minor trainer is a pharmacist who has trained no more than two people.
+(They may have trained none.) 
+Find all pharmacists who have trained 2 or more minor trainors. 
+(They may have trained other pharmacists who were not minor trainors.) 
+Report the pharmacist's OCP number. \\
+
+
+{\large
+$
+TrainedAtLeastThree(OCP):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{P1}
+	\sigma_{
+		T1.\var{P1} < T2.\var{P1} < T3.\var{P1} \wedge 
+		T1.\var{P2} = T2.\var{P2} = T3.\var{p2} }
+	[ (\rho_{T1}TrainedUnder) \times (\rho_{T2}TrainedUnder) \times (\rho_{T3}TrainedUnder) ] \\[5pt]	
+MinorTrainer(OCP):= \\[5pt]
+	\hspace*{1cm}
+	TrainedAtLeastThree - 
+	\Pi_{OCP}
+	(Pharmacist) \\[5pt]
+TrainMinorAtLeastOne(P2):= \\[5pt]
+	\hspace*{1cm}
+	\pi_{P2}
+	(TrainedUnder \bowtie_{MinorTrainer.OCP=TrainedUnder.P1} MinorTrainer) \\[5pt]
+ANS(OCP):= \\[5pt]
+ 	\hspace*{1cm}
+ 	\Pi_{P2}
+	\sigma_{
+		T1.\var{P1} < T2.\var{P1} < T3.\var{P1} \wedge 
+		T1.\var{P2} = T2.\var{P2} = T3.\var{p2}}
+	[ (\rho_{T1}TrainMinorAtLeastOne) \times \\
+	(\rho_{T2}TrainMinorAtLeastOne) \times (\rho_{T3}TrainMinorAtLeastOne) ] \\[5pt]
+$
+}
+
+
+\item   % ----------
+Find the most junior pharmacist:
+the pharmacist whose first time filling a prescription has the latest date.
+Report the pharmacist's OCP number, the prescription ID for the first prescription they filled,
+the date on which it was written, and the date on which it was filled. \\
+
+{\large
+$
+All(OCP, RxID, writeDate, filldate):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{pharmacist, RxID, writedate, filldate}  
+	((\rho_{date->filldate}Filled) \bowtie (\rho_{date->writedate}Prescription) \\[5pt]	
+NotLatest(OCP, RxID, writeDate, filldate):= \\[5pt]
+	\hspace*{1cm}
+	\Pi_{A1.pharmacist, A1.RxID, A1.writedate, A1.filldate}
+	\sigma_{A1.date < A2.date}
+	[(\rho_{A1}ALL) \times (\rho_{A2}ALL)] \\[5pt]
+ANS(OCP, RxID, writeDate, filldate):= \\[5pt]
+ 	\hspace*{1cm}
+ 	\Pi_{pharmacist, RxID, writedate, filldate}
+	(ALL - NotLatest)\\[5pt]
+$
+}
+
+
+\item   % ----------
+Find every patient who has had a prescription for a homeopathic drug product filled,
+that is, a product whose schedule is ``homeopathic",
+but has never had a prescription filled for a drug product with any other schedule.
+
+
+\item   % ----------
+Find all patients who have had at least two prescriptions for narcotics that have a
+single active ingredient, whose units are mg,
+and for whom the dosage of the ingredient in these prescriptions never decreased
+from one prescription to the next.
+Report their OHIP number.
+
+
+\item   % ----------
+Report the OCP number of the pharmacist who has had the greatest number of other pharmacists train under him or her.
+
+
+\item   % ----------
+For each pharmacist who has trained anyone,
+report their OCP number, the OCP number of the first person to complete training under them, and the OCP number of the last person to complete training under them.
+Your resulting relation should have three attributes: ``OCP", ``first" and ``last".
+
+
+\item   % ----------
+Find all people who have, at least twice, had more than one prescription filled in a year, but haven't had one filled since 2014. 
+Report the person's OHIP number and the last date on which they had
+a prescription filled.
+
+\end{enumerate}
+
+
+
+%----------------------------------------------------------------------------------------------------------------------
+\section*{Part 2: Additional Integrity Constraints}
+
+\begin{enumerate}
+
+\item   % ----------
+A pharmacist can only train under someone who registered with the Ontario College of Physicians before they did.
+
+
+\item   % ----------
+A doctor can't prescribe a controlled substance (a product with schedule ``narcotics")
+until after they have prescribed three different over-the-counter drug products (products with schedule ``OTC").
+
+\end{enumerate}
+
+\end{document}
+
+
+
